@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+</head>
+<body id="app" class="min-h-screen flex flex-col text-white bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-700">
+
+  <!-- Header -->
+  <header class="p-6 bg-black/20 backdrop-blur-md">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold flex items-center gap-2 animate__animated animate__fadeInDown">
+        <i class="fas fa-cloud-sun"></i> Weather Pro
+      </h1>
+      <div class="flex gap-3">
+        <button id="themeBtn" class="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
+          🌙
+        </button>
+        <button id="locationBtn" class="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition animate__animated animate__fadeInDown animate__delay-1s">
+          <i class="fas fa-location-arrow"></i> My Location
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto p-6 flex-grow">
+    <!-- Search -->
+    <div class="flex gap-3 mb-8 animate__animated animate__fadeInUp">
+      <input id="cityInput" type="text" placeholder="Enter city..." 
+        class="flex-1 px-4 py-3 rounded-lg text-black focus:ring-2 focus:ring-yellow-400 outline-none">
+      <button id="searchBtn" class="px-6 py-3 bg-yellow-500 rounded-lg hover:bg-yellow-600 transition">
+        Search
+      </button>
+    </div>
+
+    <!-- Error -->
+    <p id="errorMsg" class="hidden text-red-300 mb-4"></p>
+
+    <!-- Current Weather -->
+    <div id="weatherResult" class="hidden glass p-6 rounded-2xl bg-white/10 animate__animated animate__fadeIn">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+          <h2 id="cityName" class="text-3xl font-bold"></h2>
+          <p id="desc" class="capitalize text-lg"></p>
+          <div class="flex items-center gap-4">
+            <img id="icon" src="" alt="Weather icon" class="w-20 h-20 animate__animated animate__fadeIn">
+            <p id="temp" class="text-6xl font-light"></p>
+          </div>
+          <p id="feels" class="text-lg mt-2"></p>
+        </div>
+        <div class="space-y-2">
+          <p id="humidity"></p>
+          <p id="wind"></p>
+          <p id="pressure"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forecast -->
+    <div id="forecastResult" class="hidden mt-8 animate__animated animate__fadeInUp">
+      <h3 class="text-2xl font-bold mb-4">5-Day Forecast</h3>
+      <div id="forecast" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center py-4 text-white/70 text-sm bg-black/20">
+    Made with ❤️ using OpenWeather API
+  </footer>
+
+  <script>
+    const apiKey = "22559cbd0b3ebde3727a80f9ed23de0f"; 
+    const app = document.getElementById("app");
+
+    const searchBtn = document.getElementById("searchBtn");
+    const cityInput = document.getElementById("cityInput");
+    const locationBtn = document.getElementById("locationBtn");
+    const themeBtn = document.getElementById("themeBtn");
+
+    const weatherResult = document.getElementById("weatherResult");
+    const forecastResult = document.getElementById("forecastResult");
+    const errorMsg = document.getElementById("errorMsg");
+
+    const cityName = document.getElementById("cityName");
+    const temp = document.getElementById("temp");
+    const desc = document.getElementById("desc");
+    const feels = document.getElementById("feels");
+    const humidity = document.getElementById("humidity");
+    const wind = document.getElementById("wind");
+    const pressure = document.getElementById("pressure");
+    const forecast = document.getElementById("forecast");
+    const icon = document.getElementById("icon");
+
+    // 🌙 / ☀️ Theme toggle
+    let isNight = false;
+    themeBtn.addEventListener("click", () => {
+      isNight = !isNight;
+      if (isNight) {
+        app.className = "min-h-screen flex flex-col text-white transition-all duration-700 bg-gradient-to-r from-indigo-900 via-purple-900 to-black";
+        themeBtn.textContent = "☀️";
+      } else {
+        app.className = "min-h-screen flex flex-col text-white transition-all duration-700 bg-gradient-to-r from-blue-500 to-indigo-600";
+        themeBtn.textContent = "🌙";
+      }
+    });
+
+    async function getWeather(city) {
+      try {
+        errorMsg.classList.add("hidden");
+        weatherResult.classList.add("hidden");
+        forecastResult.classList.add("hidden");
+
+        // Current Weather
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`);
+        if (!res.ok) throw new Error("City not found");
+        const data = await res.json();
+
+        cityName.textContent = `${data.name}, ${data.sys.country}`;
+        temp.textContent = `${Math.round(data.main.temp)}°C`;
+        desc.textContent = data.weather[0].description;
+        feels.textContent = `Feels like: ${Math.round(data.main.feels_like)}°C`;
+        humidity.textContent = `Humidity: ${data.main.humidity}%`;
+        wind.textContent = `Wind: ${Math.round(data.wind.speed * 3.6)} km/h`;
+        pressure.textContent = `Pressure: ${data.main.pressure} hPa`;
+        icon.src = `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+
+        weatherResult.classList.remove("hidden");
+
+        // Forecast
+        const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${data.coord.lat}&lon=${data.coord.lon}&appid=${apiKey}&units=metric`);
+        const forecastData = await forecastRes.json();
+
+        forecast.innerHTML = "";
+        const daily = {};
+
+        forecastData.list.forEach(item => {
+          const date = item.dt_txt.split(" ")[0];
+          if (!daily[date] && item.dt_txt.includes("12:00:00")) {
+            daily[date] = item;
+          }
+        });
+
+        Object.values(daily).slice(0, 5).forEach(day => {
+          const d = new Date(day.dt_txt);
+          const card = document.createElement("div");
+          card.className = "p-4 rounded-xl bg-white/20 text-center hover:scale-105 transform transition animate__animated animate__fadeInUp";
+          card.innerHTML = `
+            <p class="text-lg font-semibold">${d.toLocaleDateString("en-US", { weekday: "short" })}</p>
+            <img src="http://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png" class="w-16 h-16 mx-auto">
+            <p class="text-2xl">${Math.round(day.main.temp)}°C</p>
+            <p class="capitalize text-sm">${day.weather[0].description}</p>
+          `;
+          forecast.appendChild(card);
+        });
+
+        forecastResult.classList.remove("hidden");
+
+      } catch (error) {
+        errorMsg.textContent = error.message;
+        errorMsg.classList.remove("hidden");
+      }
+    }
+
+    // Event listeners
+    searchBtn.addEventListener("click", () => {
+      if (cityInput.value.trim()) getWeather(cityInput.value.trim());
+    });
+    cityInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") searchBtn.click();
+    });
+    locationBtn.addEventListener("click", () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`);
+          const data = await res.json();
+          getWeather(data.name);
+        });
+      }
+    });
+
+    // Default load
+    window.addEventListener("load", () => getWeather("New York"));
+  </script>
+</body>
+</html>
